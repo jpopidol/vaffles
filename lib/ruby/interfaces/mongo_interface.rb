@@ -45,4 +45,13 @@ module MongoInterface
     @db[table_name].drop
   end
 
+  def find(table_name, field_hash)
+    query = @db[table_name].find(field_hash)
+    query
+  end
+
+  def update(table_name, field_hash, entry)
+    table = @db[table_name].update(field_hash,entry)
+  end
+
 end

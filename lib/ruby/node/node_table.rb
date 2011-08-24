@@ -59,6 +59,7 @@ class NodeTable
   end
 
   def get_node_by_hostname(hostname)
+    
   end
 
   def setup(node_id)
