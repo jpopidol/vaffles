@@ -1,4 +1,4 @@
-class TestTable
+class Item
   module Fields
     TABLE_NAME = "tests"
     

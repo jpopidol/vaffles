@@ -1,15 +1,19 @@
-require FILE_PATH + "/lib/ruby/node/node.rb"
+require FILE_PATH + "/lib/ruby/node/node_fields.rb"
+require FILE_PATH + "/lib/ruby/node/node_status.rb"
 require FILE_PATH + "/lib/ruby/database.rb"
 
 class NodeTable
   NODE_LIST_YAML_PATH = FILE_PATH + "/etc/node_list.yml"
 
-  def initialize(db, master_hostname)
-    @db = db
+  include Node::Fields
+  include Node::Status
+  include Database
+
+  def initialize(master_hostname)
     @master_hostname = master_hostname
   end
 
-  def load_list(file_path)
+  def import_list(file_path)
     list = YAML::load(File.open(file_path))
     list["nodes"].each do |node|
       entry = create_node_entry(
@@ -17,36 +21,34 @@ class NodeTable
         node,
         "fake entry")
       puts entry.inspect
-      @db.insert(Node::Fields::TABLE_NAME, entry)
+      @db[TABLE_NAME].insert(entry)
     end
   end
 
   def create_node_entry(master_hostname, slave_hostname, notes)
     entry = { 
-      Node::Fields::SLAVE_HOSTNAME  => slave_hostname,
-      Node::Fields::NOTES           => notes,
-      Node::Fields::STATUS          => Node::Status::NEW,
-      Node::Fields::MASTER_HOSTNAME => master_hostname
+      SLAVE_HOSTNAME  => slave_hostname,
+      NOTES           => notes,
+      STATUS          => NEW,
+      MASTER_HOSTNAME => master_hostname
     }   
     entry
   end
 
   def create_table
-    @db.create_table(Node::Fields::TABLE_NAME)
-    @db.create_index(
-      Node::Fields::TABLE_NAME,
-      Node::Fields::SLAVE_HOSTNAME, 
-      true)
+    @db[TABLE_NAME].create_index(
+      SLAVE_HOSTNAME, 
+      :unique => true)
   end
 
   #Creating and deleting a node table is an all or nothing, status of individual nodes is managed elsewhere
   def construct
     create_table
-    load_list(NODE_LIST_YAML_PATH)
+    import_list(NODE_LIST_YAML_PATH)
   end
 
   def purge
-    @db.drop(Node::Fields::TABLE_NAME)
+    @db[TABLE_NAME].drop
   end
 
   def reconstruct
@@ -55,7 +57,10 @@ class NodeTable
   end
 
   def output
-    @db.test_output(Node::Fields::TABLE_NAME)
+    entries = @db[TABLE_NAME].find()
+    entries.each do |entry|
+      puts entry.inspect
+    end
   end
 
   def get_node_by_hostname(hostname)
